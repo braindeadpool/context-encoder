@@ -75,13 +75,25 @@ print("Dataset Size: ", data:size())
 local image_ctx = data:getBatch()
 print('Loaded Image Block: ', image_ctx:size(1)..' x '..image_ctx:size(2) ..' x '..image_ctx:size(3)..' x '..image_ctx:size(4))
 
--- remove center region from input image
-real_center = image_ctx[{{},{},{1 + opt.fineSize/4, opt.fineSize/2 + opt.fineSize/4},{1 + opt.fineSize/4, opt.fineSize/2 + opt.fineSize/4}}]:clone() -- copy by value
+-- -- remove center region from input image
+-- real_center = image_ctx[{{},{},{1 + opt.fineSize/4, opt.fineSize/2 + opt.fineSize/4},{1 + opt.fineSize/4, opt.fineSize/2 + opt.fineSize/4}}]:clone() -- copy by value
+
+-- -- fill center region with mean value
+-- image_ctx[{{},{1},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 2*117.0/255.0 - 1.0
+-- image_ctx[{{},{2},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 2*104.0/255.0 - 1.0
+-- image_ctx[{{},{3},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 2*123.0/255.0 - 1.0
+
+
+y_start = 53
+y_end = 73
+-- remove center 1/6th region from input image
+real_center = image_ctx[{{},{},{y_start, y_end},{}}]:clone() -- copy by value
 
 -- fill center region with mean value
-image_ctx[{{},{1},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 2*117.0/255.0 - 1.0
-image_ctx[{{},{2},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 2*104.0/255.0 - 1.0
-image_ctx[{{},{3},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 2*123.0/255.0 - 1.0
+image_ctx[{{},{1},{y_start + opt.overlapPred, y_end - opt.overlapPred},{}}] = 2*117.0/255.0 - 1.0
+image_ctx[{{},{2},{y_start + opt.overlapPred, y_end - opt.overlapPred},{}}] = 2*104.0/255.0 - 1.0
+image_ctx[{{},{3},{y_start + opt.overlapPred, y_end - opt.overlapPred},{}}] = 2*123.0/255.0 - 1.0
+
 input_image_ctx:copy(image_ctx)
 
 -- run Context-Encoder to inpaint center
@@ -119,9 +131,9 @@ end
 -- save outputs in a pretty manner
 real_center=nil; pred_center=nil;
 pretty_output = torch.Tensor(2*opt.batchSize, opt.nc, opt.fineSize, opt.fineSize)
-input_image_ctx[{{},{1},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 1
-input_image_ctx[{{},{2},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 1
-input_image_ctx[{{},{3},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred},{1 + opt.fineSize/4 + opt.overlapPred, opt.fineSize/2 + opt.fineSize/4 - opt.overlapPred}}] = 1
+input_image_ctx[{{},{1},{y_start + opt.overlapPred, y_end - opt.overlapPred},{}}] = 1
+input_image_ctx[{{},{2},{y_start + opt.overlapPred, y_end - opt.overlapPred},{}}] = 1
+input_image_ctx[{{},{3},{y_start + opt.overlapPred, y_end - opt.overlapPred},{}}] = 1
 for i=1,opt.batchSize do
     pretty_output[2*i-1]:copy(input_image_ctx[i])
     pretty_output[2*i]:copy(image_ctx[i])
